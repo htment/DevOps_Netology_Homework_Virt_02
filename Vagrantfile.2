@@ -1,0 +1,44 @@
+ISO = "bento/ubuntu-24.04"
+NET = "192.168.191."
+DOMAIN = ".arthome"
+HOST_PREFIX = "server"
+
+Vagrant.configure("2") do |config|
+  config.vm.box = ISO
+
+  config.vm.define "#{HOST_PREFIX}1#{DOMAIN}" do |node|
+    node.vm.hostname = "#{HOST_PREFIX}1#{DOMAIN}"
+    node.vm.network "private_network", ip: "#{NET}11"
+    node.vm.network :forwarded_port, guest: 22, host: 20011
+  end
+
+  config.vm.provider "libvirt" do |lv|
+    lv.memory = 1024
+    lv.cpus = 1
+    
+    # ЯВНО укажите использовать QEMU вместо KVM
+    lv.driver = "qemu"
+    lv.uri = "qemu:///system"
+    
+    # Отключите KVM acceleration
+    lv.nested = false
+    
+    # Укажите тип машины
+    lv.machine_type = "pc"
+    
+    # Укажите режим CPU
+    lv.cpu_mode = "custom"
+    lv.cpu_model = "qemu64"
+    
+    # Настройки сети
+    lv.management_network_name = "vagrant-libvirt"
+    lv.management_network_address = "192.168.121.0/24"
+    lv.management_network_mode = "nat"
+    
+    # Используйте session вместо system
+    lv.qemu_use_session = false
+  end
+
+  config.ssh.insert_key = false
+  config.vm.boot_timeout = 600
+end
