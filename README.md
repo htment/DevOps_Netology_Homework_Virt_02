@@ -365,3 +365,6 @@ yc compute image list
 yc compute instance list
 ```
 ![alt text](image-31.png)
+````
+###########3
+````
