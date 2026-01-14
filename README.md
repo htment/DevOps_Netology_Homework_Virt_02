@@ -1,4 +1,4 @@
-# Задача 1
+# Задача 2
 Установите на личный Linux-компьютер или учебную локальную ВМ с Linux следующие сервисы(желательно ОС ubuntu 20.04):
 
 VirtualBox,
@@ -206,3 +206,160 @@ vagrant ssh
 ``vagrant status``
 
 ![alt text](image-16.png)
+
+# Задача 3
+
+## Установка YC CLI
+```
+curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+
+sudo cp  yandex-cloud/bin/yc /usr/bin/
+
+# Инициализация YC CLI
+yc init
+```
+![alt text](image-17.png)
+```
+# Проверка подключения
+yc config list
+```
+![alt text](image-19.png)
+
+
+или
+```
+yc config set service-account-key yandex-cloud/authorized_key.json
+yc config list
+```
+![alt text](image-18.png)
+
+
+
+Список рабочих образов
+```
+yc compute image list
+```
+![alt text](image-20.png)
+
+создадим сеть 
+
+```
+yc vpc network create --name net --labels my-label=netology --description "My network"
+```
+![alt text](image-22.png)
+![alt text](image-21.png)
+
+
+Создадим подсеть внутири сети
+
+```
+yc vpc subnet create --name my-subnet-a --zone ru-centrall-a --range 10.1.2.0/24 --network-name net --description "My subnet"
+```
+![alt text](image-24.png)
+
+## Сборка образа с Packer
+
+### Установка Packer (если не установлен)
+```
+mkdir packer
+wget https://hashicorp-releases.yandexcloud.net/packer/1.11.2/packer_1.11.2_linux_amd64.zip -P ~/packer
+unzip ~/packer/packer_1.11.2_linux_amd64.zip -d ~/packer
+
+
+# Добавьте в файл .profile строку:
+export PATH="$PATH:/home/art/packer"
+# Перезапустите оболочку:
+exec -l $SHELL
+
+cp  ~/packer/packer /usr/bin/
+
+
+packer --version
+
+```
+### Настройте плагин Yandex Compute Builder
+```
+cat>config.pkr.hcl<<EOF
+packer {
+  required_plugins {
+    yandex = {
+      version = ">= 1.1.2"
+      source  = "github.com/hashicorp/yandex"
+    }
+  }
+}
+
+EOF
+
+```
+
+![alt text](image-25.png)
+```
+packer validate mydebian.json
+```
+![alt text](image-26.png)
+```
+packer build mydebian.json
+```
+
+yc compute image list
+
+![alt text](image-27.png)
+
+```
+packer validate mydebian_docker.json
+packer build mydebian_docker.json
+yc compute image list
+
+```
+
+## Создайте ВМ
+## Найдите ID вашего образа
+```
+
+# Удаляем старую ВМ
+yc compute instance delete debian-docker-vm
+
+# Создаем новую с правильным cloud-config
+yc compute instance create \
+  --name debian-docker-vm \
+  --hostname debian-docker-vm \
+  --memory 1GB \
+  --cores 2 \
+  --core-fraction 5 \
+  --create-boot-disk image-id=fd8pq6ar0fluv6akl4ff \
+  --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
+  --zone ru-central1-a \
+  --metadata-from-file user-data=<(cat << 'EOF'
+#cloud-config
+users:
+  - name: art
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    groups: sudo,docker
+    lock_passwd: false
+    passwd: "$6$rounds=4096$WvKJh8KjNt$U.pY8jH.N8mZ7KQ1Hp8ZJv8tRwLpX1dM.7gSfV8eWkC1nTqG5sY6hP9bV2cE3rF4xY5zA6B7vD8"
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJbq9DwdMFOi0n4bceuSW/2yO6nPKoV41TsIAaCxkxu3 art@debian-sb
+EOF
+) \
+  --metadata serial-port-enable=1
+
+  ```
+
+
+
+# Удаление ресурсов
+```
+# Удаление ВМ
+yc compute instance list
+yc compute instance delete debian-docker-vm
+
+# Удаление образа
+yc compute image list
+yc compute image delete ваш_image_id
+
+# Проверьте, что всё удалено
+yc compute image list
+yc compute instance list
+```

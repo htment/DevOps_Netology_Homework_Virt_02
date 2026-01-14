@@ -1,0 +1,99 @@
+{
+  "builders": [
+    {
+      "type": "yandex",
+      "token": "y0__xCbkbEDGMHdEyDByfuHFow69Xw3_r4g5FLxaFuvVGOFJGey",
+      "folder_id": "b1gqe649cpgjsd7qhnu5",
+      "zone": "ru-central1-a",
+      "image_name": "debian-11-docker1",
+      "image_description": "my custom debian with docker",
+      "source_image_family": "debian-11",
+      "subnet_id": "e9bro9obh8vat2e49vg5",
+      "use_ipv4_nat": true,
+      "disk_type": "network-hdd",
+      "ssh_username": "debian"
+    }
+  ],
+  "provisioners": [
+
+    {
+      "type": "shell",
+      "inline": [
+        "# Отключаем проверку неработающих репозиториев",
+        "sudo sh -c 'echo \"Acquire::Check-Valid-Until false;\" > /etc/apt/apt.conf.d/99ignore-expired'",
+        "sudo sh -c 'echo \"Acquire::AllowInsecureRepositories true;\" >> /etc/apt/apt.conf.d/99ignore-expired'",
+        "sudo sh -c 'echo \"Acquire::AllowDowngradeToInsecureRepositories true;\" >> /etc/apt/apt.conf.d/99ignore-expired'"
+      ]
+    },
+
+
+
+    {
+      "type": "shell",
+      "inline": [
+        "echo 'hello from packer'"
+      ]
+    },
+
+    {
+      "type": "shell",
+      "inline": [
+        "sudo useradd -m art -s /bin/bash && sudo usermod -aG sudo art && echo \"art ALL=(ALL) NOPASSWD:ALL\" | sudo tee /etc/sudoers.d/art",
+        "sudo chmod 440 /etc/sudoers.d/art",
+        "sleep 5"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "# Удаляем все упоминания о backports",
+        "sudo sed -i '/backports/d' /etc/apt/sources.list",
+        "sudo sed -i '/backports/d' /etc/apt/sources.list.d/* 2>/dev/null || true",
+        "sudo rm -f /etc/apt/sources.list.d/*backports*"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "# Обновляем apt без ошибок",
+        "sudo apt-get update -y 2>&1 | grep -v \"bullseye-backports\" || true",
+        "sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release software-properties-common"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "# Устанавливаем Docker",
+        "curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
+        "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "# Обновляем и устанавливаем Docker пакеты",
+        "sudo apt-get update -y",
+        "sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "# Устанавливаем дополнительные пакеты и настраиваем",
+        "sudo apt-get install -y htop tmux nano vim git",
+        "sudo systemctl enable docker",
+        "sudo usermod -aG docker art",
+        "sudo usermod -aG docker debian"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "# Очистка",
+        "sudo apt-get autoremove -y",
+        "sudo apt-get clean",
+        "sudo rm -rf /var/lib/apt/lists/*"
+      ]
+    }
+  ]
+}
