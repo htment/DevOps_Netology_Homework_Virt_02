@@ -321,6 +321,8 @@ yc compute image list
 yc compute instance delete debian-docker-vm
 
 # Создаем новую с правильным cloud-config
+YC_KEY_FILE="$HOME/.ssh/id_ed25519.pub"
+
 yc compute instance create \
   --name debian-docker-vm \
   --hostname debian-docker-vm \
@@ -330,7 +332,7 @@ yc compute instance create \
   --create-boot-disk image-id=fd8pq6ar0fluv6akl4ff \
   --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
   --zone ru-central1-a \
-  --metadata-from-file user-data=<(cat << 'EOF'
+  --metadata-from-file user-data=<(cat << EOF
 #cloud-config
 users:
   - name: art
@@ -340,14 +342,13 @@ users:
     lock_passwd: false
     passwd: "$6$rounds=4096$WvKJh8KjNt$U.pY8jH.N8mZ7KQ1Hp8ZJv8tRwLpX1dM.7gSfV8eWkC1nTqG5sY6hP9bV2cE3rF4xY5zA6B7vD8"
     ssh_authorized_keys:
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJbq9DwdMFOi0n4bceuSW/2yO6nPKoV41TsIAaCxkxu3 art@debian-sb
+      - $(cat "$YC_KEY_FILE")
 EOF
 ) \
   --metadata serial-port-enable=1
 
   ```
-
-
+![alt text](image-30.png)
 
 # Удаление ресурсов
 ```
@@ -363,3 +364,4 @@ yc compute image delete ваш_image_id
 yc compute image list
 yc compute instance list
 ```
+![alt text](image-31.png)
